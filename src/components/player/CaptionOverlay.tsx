@@ -44,19 +44,19 @@ export const CaptionOverlay: React.FC<CaptionOverlayProps> = ({ caption }) => {
   if (theme.displayMode === "full" && theme.highlightMode === "full-background") {
     return (
       <div
-        className="absolute inset-x-0 flex items-center justify-center px-12 py-8 transition-all duration-150"
+        className="absolute left-0 right-0 flex items-center justify-center px-8 transition-all duration-150"
         style={{
-          top: `${Math.max(10, Math.min(75, yPercent))}%`,
+          top: `${yPercent}%`,
           transform: "translateY(-50%)",
         }}
       >
         <div
-          className="relative px-6 py-3 rounded-2xl max-w-[85%] text-center"
+          className="relative px-6 py-3 rounded-2xl max-w-[90%] text-center"
           style={{
             backgroundColor: highlightColor,
           }}
         >
-          <span className="font-bold leading-tight break-words" style={baseTextStyle}>
+          <span className="font-bold leading-tight" style={baseTextStyle}>
             {caption.text}
           </span>
         </div>
@@ -68,14 +68,14 @@ export const CaptionOverlay: React.FC<CaptionOverlayProps> = ({ caption }) => {
   if (theme.displayMode === "full" && theme.highlightMode === "none") {
     return (
       <div
-        className="absolute inset-x-0 flex items-center justify-center px-12 py-8 transition-all duration-150"
+        className="absolute left-0 right-0 flex items-center justify-center px-8 transition-all duration-150"
         style={{
-          top: `${Math.max(10, Math.min(75, yPercent))}%`,
+          top: `${yPercent}%`,
           transform: "translateY(-50%)",
         }}
       >
-        <div className="relative max-w-[85%] text-center">
-          <span className="font-bold leading-tight break-words" style={baseTextStyle}>
+        <div className="relative max-w-[90%] text-center">
+          <span className="font-bold leading-tight" style={baseTextStyle}>
             {caption.text}
           </span>
         </div>
@@ -89,15 +89,15 @@ export const CaptionOverlay: React.FC<CaptionOverlayProps> = ({ caption }) => {
     
     return (
       <div
-        className="absolute inset-x-0 flex items-center justify-center px-12 py-8"
+        className="absolute left-0 right-0 flex items-center justify-center px-8"
         style={{
-          top: `${Math.max(10, Math.min(75, yPercent))}%`,
+          top: `${yPercent}%`,
           transform: "translateY(-50%)",
         }}
       >
-        <div className="relative max-w-[85%] text-center">
+        <div className="relative max-w-[90%] text-center">
           <span 
-            className="font-bold leading-tight animate-scale-in break-words" 
+            className="font-bold leading-tight animate-scale-in" 
             style={baseTextStyle}
             key={`${caption.id}-${activeWordIndex}`}
           >
@@ -112,14 +112,14 @@ export const CaptionOverlay: React.FC<CaptionOverlayProps> = ({ caption }) => {
   if (theme.displayMode === "karaoke") {
     return (
       <div
-        className="absolute inset-x-0 flex items-center justify-center px-12 py-8 transition-all duration-150"
+        className="absolute left-0 right-0 flex items-center justify-center px-8 transition-all duration-150"
         style={{
-          top: `${Math.max(10, Math.min(75, yPercent))}%`,
+          top: `${yPercent}%`,
           transform: "translateY(-50%)",
         }}
       >
-        <div className="relative max-w-[85%] text-center">
-          <div className="inline-flex flex-wrap gap-2 justify-center items-center">
+        <div className="relative max-w-[90%] text-center">
+          <div className="inline-flex flex-wrap gap-2 justify-center">
             {words.map((word, index) => {
               const isActive = index === activeWordIndex;
               
@@ -166,14 +166,14 @@ export const CaptionOverlay: React.FC<CaptionOverlayProps> = ({ caption }) => {
   // Fallback: show full text
   return (
     <div
-      className="absolute inset-x-0 flex items-center justify-center px-12 py-8 transition-all duration-150"
+      className="absolute left-0 right-0 flex items-center justify-center px-8 transition-all duration-150"
       style={{
-        top: `${Math.max(10, Math.min(75, yPercent))}%`,
+        top: `${yPercent}%`,
         transform: "translateY(-50%)",
       }}
     >
-      <div className="relative max-w-[85%] text-center">
-        <span className="font-bold leading-tight break-words" style={baseTextStyle}>
+      <div className="relative max-w-[90%] text-center">
+        <span className="font-bold leading-tight" style={baseTextStyle}>
           {caption.text}
         </span>
       </div>

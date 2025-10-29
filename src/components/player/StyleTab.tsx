@@ -113,11 +113,10 @@ export const StyleTab: React.FC = () => {
 
       <div>
         <Label className="text-sm mb-2 block">Position Y: {yPercent}%</Label>
-        <p className="text-xs text-muted-foreground mb-2">Safe range: 10% - 75%</p>
         <Slider
           value={[yPercent]}
-          min={10}
-          max={75}
+          min={1}
+          max={80}
           step={1}
           onValueChange={(v) => setYPercent(v[0])}
         />
