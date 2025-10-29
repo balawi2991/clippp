@@ -22,6 +22,8 @@ export interface Theme {
   strokeColor: string;
   shadowBlur: number;
   shadowColor: string;
+  displayMode: "full" | "word-by-word" | "karaoke";
+  highlightMode: "full-background" | "word-highlight" | "none" | "stroke-only";
 }
 
 export interface ThemeOverrides {

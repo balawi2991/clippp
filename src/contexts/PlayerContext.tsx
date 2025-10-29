@@ -8,9 +8,11 @@ interface PlayerContextType {
   themeOverrides: ThemeOverrides;
   captions: CaptionBlock[];
   yPercent: number;
+  currentTime: number;
   setCurrentTheme: (theme: string) => void;
   updateThemeOverride: (key: keyof ThemeOverrides, value: any) => void;
   setYPercent: (value: number) => void;
+  setCurrentTime: (time: number) => void;
   addCaption: () => void;
   updateCaption: (id: string, updates: Partial<CaptionBlock>) => void;
   deleteCaption: (id: string) => void;
@@ -38,6 +40,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     { id: "c5", start: 3.63, end: 4.34, text: "in european", visible: true },
   ]);
   const [yPercent, setYPercent] = useState(50);
+  const [currentTime, setCurrentTime] = useState(0);
 
   const updateThemeOverride = useCallback((key: keyof ThemeOverrides, value: any) => {
     setThemeOverrides((prev) => ({ ...prev, [key]: value }));
@@ -136,9 +139,11 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         themeOverrides,
         captions,
         yPercent,
+        currentTime,
         setCurrentTheme,
         updateThemeOverride,
         setYPercent,
+        setCurrentTime,
         addCaption,
         updateCaption,
         deleteCaption,

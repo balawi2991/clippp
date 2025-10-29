@@ -8,15 +8,19 @@ import { usePlayer } from "@/contexts/PlayerContext";
 export const VideoPreview: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setLocalCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const { captions } = usePlayer();
+  const { captions, setCurrentTime } = usePlayer();
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+    const handleTimeUpdate = () => {
+      const time = video.currentTime;
+      setLocalCurrentTime(time);
+      setCurrentTime(time);
+    };
     const handleLoadedMetadata = () => setDuration(video.duration);
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
@@ -32,7 +36,7 @@ export const VideoPreview: React.FC = () => {
       video.removeEventListener("play", handlePlay);
       video.removeEventListener("pause", handlePause);
     };
-  }, []);
+  }, [setCurrentTime]);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
