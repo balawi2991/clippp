@@ -26,8 +26,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [currentTheme, setCurrentTheme] = useState("HORMOZI");
   const [themeOverrides, setThemeOverrides] = useState<ThemeOverrides>({
     textColor: "#FFFFFF",
-    highlightColor: "#2BF82A",
-    fontSize: 80,
+    highlightColor: "#00FF00",
+    fontSize: 85,
     yPercent: 50,
   });
   const [captions, setCaptions] = useState<CaptionBlock[]>([

@@ -100,9 +100,9 @@ export const StyleTab: React.FC = () => {
                 Font Size: {themeOverrides.fontSize}px
               </Label>
               <Slider
-                value={[themeOverrides.fontSize || 80]}
+                value={[themeOverrides.fontSize || 85]}
                 min={40}
-                max={120}
+                max={140}
                 step={1}
                 onValueChange={(v) => updateThemeOverride("fontSize", v[0])}
               />
