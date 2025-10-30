@@ -122,34 +122,47 @@ export async function transcribeMultipleAudios(audioFiles) {
 }
 
 /**
- * Create caption blocks from word timestamps (2 words per block)
+ * Create smart caption blocks with dynamic word count (1-4 words)
  * @param {Array} words - Array of word objects with timestamps
- * @param {number} wordsPerBlock - Words per caption block (default: 2)
  * @returns {Array} Array of caption blocks
  */
-export function createCaptionBlocksFromWords(words, wordsPerBlock = 2) {
+export function createCaptionBlocksFromWords(words) {
   const blocks = [];
+  let currentBlock = [];
   
-  for (let i = 0; i < words.length; i += wordsPerBlock) {
-    const blockWords = words.slice(i, i + wordsPerBlock);
+  const TARGET_DURATION = 1.2; // 1.2 seconds per caption
+  const MIN_DURATION = 0.8;
+  const MAX_DURATION = 1.8;
+  const MAX_WORDS = 4;
+  
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    currentBlock.push(word);
     
-    if (blockWords.length === 0) continue;
+    const blockDuration = currentBlock[currentBlock.length - 1].end - currentBlock[0].start;
+    const isLastWord = i === words.length - 1;
     
-    const blockText = blockWords.map(w => w.word).join(' ');
-    const startTime = blockWords[0].start;
-    const endTime = blockWords[blockWords.length - 1].end;
+    // Decide if we should break the caption
+    const shouldBreak = 
+      isLastWord ||  // Last word
+      currentBlock.length >= MAX_WORDS ||  // Max 4 words
+      blockDuration >= MAX_DURATION ||  // Max 1.8s
+      (blockDuration >= MIN_DURATION && currentBlock.length >= 2);  // Good enough
     
-    blocks.push({
-      index: blocks.length,
-      text: blockText,
-      startTime,
-      endTime,
-      words: blockWords.map(w => ({
-        w: w.word,
-        s: w.start,
-        e: w.end
-      }))
-    });
+    if (shouldBreak) {
+      blocks.push({
+        index: blocks.length,
+        text: currentBlock.map(w => w.word).join(' '),
+        startTime: currentBlock[0].start,
+        endTime: currentBlock[currentBlock.length - 1].end,
+        words: currentBlock.map(w => ({
+          w: w.word,
+          s: w.start,
+          e: w.end
+        }))
+      });
+      currentBlock = [];
+    }
   }
   
   return blocks;

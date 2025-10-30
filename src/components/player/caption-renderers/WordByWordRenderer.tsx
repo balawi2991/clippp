@@ -32,11 +32,24 @@ export const WordByWordRenderer: React.FC<WordByWordRendererProps> = ({
 
   const activeWordIndex = useMemo(() => {
     if (!caption.start || !caption.end) return 0;
+    
+    // Use precise word timing from Whisper if available
+    if (caption.words && caption.words.length > 0) {
+      for (let i = 0; i < caption.words.length; i++) {
+        const word = caption.words[i];
+        if (currentTime >= word.s && currentTime < word.e) {
+          return i;
+        }
+      }
+      return caption.words.length - 1;
+    }
+    
+    // Fallback: distribute time evenly
     const captionDuration = caption.end - caption.start;
     const timeIntoCaption = currentTime - caption.start;
     const progress = Math.max(0, Math.min(1, timeIntoCaption / captionDuration));
     return Math.floor(progress * words.length);
-  }, [currentTime, caption.start, caption.end, words.length]);
+  }, [currentTime, caption.start, caption.end, caption.words, words.length]);
 
   const currentWord = words[Math.min(activeWordIndex, words.length - 1)] || "";
 
