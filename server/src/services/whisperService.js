@@ -122,7 +122,15 @@ export async function transcribeMultipleAudios(audioFiles) {
 }
 
 /**
- * Create smart caption blocks with dynamic word count (1-4 words)
+ * Create smart caption blocks with hybrid intelligent splitting
+ * Uses punctuation, natural pauses, and optimal duration
+ * 
+ * الطريقة الهجينة الذكية:
+ * - تراعي علامات الترقيم (. , ! ? ; :)
+ * - تكتشف الوقفات الطبيعية (150ms+)
+ * - تحافظ على مدة مثالية (1.2 ثانية)
+ * - مرنة (1-5 كلمات حسب السياق)
+ * 
  * @param {Array} words - Array of word objects with timestamps
  * @returns {Array} Array of caption blocks
  */
@@ -130,40 +138,65 @@ export function createCaptionBlocksFromWords(words) {
   const blocks = [];
   let currentBlock = [];
   
-  const TARGET_DURATION = 1.2; // 1.2 seconds per caption
-  const MIN_DURATION = 0.8;
-  const MAX_DURATION = 1.8;
-  const MAX_WORDS = 4;
+  // Configuration
+  const IDEAL_DURATION = 1.2;      // Optimal caption duration (المدة المثالية)
+  const MIN_DURATION = 0.6;        // Minimum duration (الحد الأدنى)
+  const MAX_DURATION = 2.0;        // Maximum duration (الحد الأقصى)
+  const MIN_WORDS = 1;             // Minimum words per caption
+  const MAX_WORDS = 5;             // Maximum words per caption (زيادة من 4 إلى 5)
+  const PAUSE_THRESHOLD = 0.15;    // 150ms = natural pause (وقفة طبيعية)
   
   for (let i = 0; i < words.length; i++) {
     const word = words[i];
+    const nextWord = words[i + 1];
+    
     currentBlock.push(word);
     
     const blockDuration = currentBlock[currentBlock.length - 1].end - currentBlock[0].start;
-    const isLastWord = i === words.length - 1;
+    const pauseAfter = nextWord ? (nextWord.start - word.end) : 0;
+    const isLastWord = !nextWord;
     
-    // Decide if we should break the caption
+    // Multi-dimensional analysis
+    const hasPunctuation = /[.,!?;:،؛]$/.test(word.word);
+    const hasNaturalPause = pauseAfter >= PAUSE_THRESHOLD;
+    const isGoodDuration = blockDuration >= MIN_DURATION && blockDuration <= IDEAL_DURATION;
+    const hasEnoughWords = currentBlock.length >= 2;
+    const isIdealLength = blockDuration >= IDEAL_DURATION && currentBlock.length >= 3;
+    
+    // Intelligent breaking decision
     const shouldBreak = 
-      isLastWord ||  // Last word
-      currentBlock.length >= MAX_WORDS ||  // Max 4 words
-      blockDuration >= MAX_DURATION ||  // Max 1.8s
-      (blockDuration >= MIN_DURATION && currentBlock.length >= 2);  // Good enough
+      isLastWord ||  // End of text
+      currentBlock.length >= MAX_WORDS ||  // Maximum words reached
+      blockDuration >= MAX_DURATION ||  // Too long
+      (hasPunctuation && hasNaturalPause && hasEnoughWords) ||  // Punctuation + pause
+      (hasNaturalPause && isGoodDuration && hasEnoughWords) ||  // Natural pause + good duration
+      isIdealLength;  // Ideal duration reached
     
     if (shouldBreak) {
-      blocks.push({
-        index: blocks.length,
-        text: currentBlock.map(w => w.word).join(' '),
-        startTime: currentBlock[0].start,
-        endTime: currentBlock[currentBlock.length - 1].end,
-        words: currentBlock.map(w => ({
-          w: w.word,
-          s: w.start,
-          e: w.end
-        }))
-      });
+      blocks.push(createBlock(currentBlock, blocks.length));
       currentBlock = [];
     }
   }
   
   return blocks;
+}
+
+/**
+ * Helper function to create a caption block
+ * @param {Array} words - Array of word objects
+ * @param {number} index - Block index
+ * @returns {Object} Caption block
+ */
+function createBlock(words, index) {
+  return {
+    index,
+    text: words.map(w => w.word).join(' '),
+    startTime: words[0].start,
+    endTime: words[words.length - 1].end,
+    words: words.map(w => ({
+      w: w.word,
+      s: w.start,
+      e: w.end
+    }))
+  };
 }
