@@ -1,0 +1,144 @@
+// Prisma Schema for Visual Voicemail Maker
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  title       String
+  status      String   @default("draft") // draft, generating, ready, exported, error
+  
+  // Settings
+  durationLimit Int    @default(30) // seconds
+  styleJson     String // JSON string of style snapshot
+  settingsJson  String // JSON string of generation settings
+  
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  scenes      Scene[]
+  captions    Caption[]
+  assets      Asset[]
+  jobs        Job[]
+  
+  @@map("projects")
+}
+
+model Scene {
+  id          String   @id @default(uuid())
+  projectId   String
+  index       Int
+  
+  // Content
+  text        String   // Scene text/description
+  duration    Float    // seconds
+  startTime   Float    // seconds from video start
+  endTime     Float    // seconds from video start
+  
+  // Image
+  imagePrompt String?  // Description for image
+  imagePath   String?  // Path to image file
+  
+  // Metadata
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@map("scenes")
+  @@index([projectId])
+}
+
+model Caption {
+  id          String   @id @default(uuid())
+  projectId   String
+  index       Int
+  
+  // Content
+  text        String
+  startTime   Float    // seconds
+  endTime     Float    // seconds
+  
+  // Word-level timing (JSON array)
+  wordsJson   String?  // [{w: "word", s: 0.5, e: 0.8}, ...]
+  
+  // Overlay
+  overlayPath String?  // Path to rendered PNG/WebP
+  
+  // Metadata
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@map("captions")
+  @@index([projectId])
+}
+
+model Asset {
+  id          String   @id @default(uuid())
+  projectId   String
+  
+  // Type
+  kind        String   // image, audio, overlay, export, temp
+  
+  // File
+  path        String   // Relative path from storage root
+  filename    String
+  mimeType    String?
+  size        Int?     // bytes
+  
+  // Metadata (JSON)
+  metadataJson String? // Additional info as JSON
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@map("assets")
+  @@index([projectId])
+}
+
+model Job {
+  id          String   @id @default(uuid())
+  projectId   String
+  
+  // Type
+  type        String   // generate, export
+  
+  // Status
+  status      String   @default("queued") // queued, running, completed, failed
+  progress    Int      @default(0) // 0-100
+  currentStep String?  // voice, images, subtitles, finalizing, burn_in
+  
+  // Steps (JSON array)
+  stepsJson   String   // [{id, label, completed}, ...]
+  
+  // Error
+  errorText   String?
+  
+  // Logs (JSON array)
+  logsJson    String?  // [{timestamp, level, message}, ...]
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  completedAt DateTime?
+  
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@map("jobs")
+  @@index([projectId])
+  @@index([status])
+}

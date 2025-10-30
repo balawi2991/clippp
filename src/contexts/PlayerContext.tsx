@@ -9,6 +9,8 @@ interface PlayerContextType {
   captions: CaptionBlock[];
   yPercent: number;
   currentTime: number;
+  videoUrl: string | null;
+  isLoading: boolean;
   setCurrentTheme: (theme: string) => void;
   updateThemeOverride: (key: keyof ThemeOverrides, value: any) => void;
   setYPercent: (value: number) => void;
@@ -24,7 +26,7 @@ interface PlayerContextType {
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
-export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const PlayerProvider: React.FC<{ children: React.ReactNode; projectId?: string }> = ({ children, projectId }) => {
   const [currentTheme, setCurrentTheme] = useState("HORMOZI");
   const [themeOverrides, setThemeOverrides] = useState<ThemeOverrides>({
     textColor: "#FFFFFF",
@@ -32,15 +34,156 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     fontSize: 85,
     yPercent: 50,
   });
-  const [captions, setCaptions] = useState<CaptionBlock[]>([
-    { id: "c1", start: 0.28, end: 1.71, text: "napoleon bonaparte", visible: true },
-    { id: "c2", start: 1.71, end: 2.03, text: "one of", visible: true },
-    { id: "c3", start: 2.03, end: 2.91, text: "the most", visible: true },
-    { id: "c4", start: 2.91, end: 3.63, text: "influential figures", visible: true },
-    { id: "c5", start: 3.63, end: 4.34, text: "in european", visible: true },
-  ]);
+  const [captions, setCaptions] = useState<CaptionBlock[]>([]);
   const [yPercent, setYPercent] = useState(50);
   const [currentTime, setCurrentTime] = useState(0);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load project data on mount
+  React.useEffect(() => {
+    if (!projectId) return;
+
+    const loadProject = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`http://localhost:3001/api/projects/${projectId}`);
+        if (!response.ok) throw new Error('Failed to load project');
+        
+        const project = await response.json();
+        
+        // Load style
+        const style = JSON.parse(project.styleJson);
+        
+        // Check if it's old format (no theme/overrides structure)
+        let themeName, loadedOverrides;
+        
+        if (style.theme && style.overrides) {
+          // New format ✅
+          themeName = style.theme;
+          loadedOverrides = style.overrides;
+          console.log('✅ Loaded style (new format):', { themeName, overrides: loadedOverrides });
+        } else {
+          // Old format - migrate to new format
+          console.log('⚠️ Old format detected, migrating...');
+          
+          // Detect theme from old properties
+          themeName = 'HORMOZI'; // Default
+          if (style.displayMode === 'word-by-word' && style.textColor === '#FFEB3B') {
+            themeName = 'VIRAL';
+          } else if (style.displayMode === 'full' && style.highlightMode === 'full-background' && style.highlightColor === '#FFD700') {
+            themeName = 'BEAST';
+          } else if (style.displayMode === 'full' && style.highlightMode === 'none') {
+            themeName = 'MINIMAL';
+          } else if (style.textColor === '#00FFFF') {
+            themeName = 'NEON';
+          }
+          
+          loadedOverrides = {
+            textColor: style.textColor || '#FFFFFF',
+            highlightColor: style.highlightColor || '#00FF00',
+            fontSize: style.fontSize || 85,
+            yPercent: style.yPercent || 50,
+          };
+          
+          console.log('✅ Migrated to:', { themeName, overrides: loadedOverrides });
+        }
+        
+        const defaultTheme = PRESET_THEMES[themeName];
+        setCurrentTheme(themeName);
+        
+        // Merge with defaults
+        const finalOverrides = {
+          textColor: loadedOverrides.textColor || defaultTheme.textColor,
+          highlightColor: loadedOverrides.highlightColor || defaultTheme.highlightColor,
+          fontSize: loadedOverrides.fontSize || defaultTheme.fontSize,
+          yPercent: loadedOverrides.yPercent || 50,
+        };
+        
+        setThemeOverrides(finalOverrides);
+        setYPercent(finalOverrides.yPercent);
+        
+        // Load captions
+        if (project.captions && project.captions.length > 0) {
+          const loadedCaptions = project.captions.map((cap: any) => ({
+            id: cap.id,
+            start: cap.startTime,
+            end: cap.endTime,
+            text: cap.text,
+            visible: true
+          }));
+          setCaptions(loadedCaptions);
+        }
+        
+        // Load preview video ONLY (for editing with live caption overlay)
+        // Export video (with burned captions) is only for download, not for player
+        const previewPath = `http://localhost:3001/storage/${projectId}/preview/base_video.mp4`;
+        
+        try {
+          // Load preview video (without burned captions)
+          const previewCheck = await fetch(previewPath, { method: 'HEAD' });
+          if (previewCheck.ok) {
+            console.log('Loading preview video (for editing):', previewPath);
+            setVideoUrl(previewPath);
+          } else {
+            console.warn('Preview video not found yet');
+          }
+        } catch (e) {
+          console.error('Error loading video:', e);
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Failed to load project:', error);
+        setIsLoading(false);
+      }
+    };
+
+    loadProject();
+  }, [projectId]);
+
+  // Auto-save to database when settings change
+  React.useEffect(() => {
+    if (!projectId || isLoading) return;
+
+    const autoSave = async () => {
+      try {
+        const theme = PRESET_THEMES[currentTheme];
+        const styleJson = JSON.stringify({
+          theme: currentTheme,
+          overrides: {
+            textColor: themeOverrides.textColor,
+            highlightColor: themeOverrides.highlightColor,
+            fontSize: themeOverrides.fontSize,
+            yPercent,
+          },
+          // Include theme properties for export
+          fontFamily: theme.fontFamily,
+          fontWeight: theme.fontWeight,
+          strokeWidth: theme.strokeWidth,
+          strokeColor: theme.strokeColor,
+          shadowBlur: theme.shadowBlur,
+          shadowColor: theme.shadowColor,
+          displayMode: theme.displayMode,
+          highlightMode: theme.highlightMode,
+        });
+
+        await fetch(`http://localhost:3001/api/projects/${projectId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ styleJson }),
+        });
+
+        console.log('✅ Auto-saved:', { theme: currentTheme, overrides: { ...themeOverrides, yPercent } });
+      } catch (error) {
+        console.error('Auto-save error:', error);
+      }
+    };
+
+    // Debounce auto-save (wait 500ms after last change)
+    const timeoutId = setTimeout(autoSave, 500);
+    return () => clearTimeout(timeoutId);
+  }, [projectId, currentTheme, themeOverrides, yPercent, isLoading]);
 
   const updateThemeOverride = useCallback((key: keyof ThemeOverrides, value: any) => {
     setThemeOverrides((prev) => ({ ...prev, [key]: value }));
@@ -79,21 +222,52 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
   }, []);
 
-  const saveConfig = useCallback(() => {
-    const config: PlayerConfig = {
-      version: 1,
-      theme: {
-        name: currentTheme,
-        overrides: themeOverrides,
-      },
-      captions,
-    };
-    localStorage.setItem("caption-player-config", JSON.stringify(config));
-    toast({
-      title: "Configuration saved",
-      description: "Your settings have been saved to local storage.",
-    });
-  }, [currentTheme, themeOverrides, captions]);
+  const saveConfig = useCallback(async () => {
+    if (!projectId) return;
+
+    try {
+      // Manual save (same as auto-save but with toast)
+      const theme = PRESET_THEMES[currentTheme];
+      const styleJson = JSON.stringify({
+        theme: currentTheme,
+        overrides: {
+          textColor: themeOverrides.textColor,
+          highlightColor: themeOverrides.highlightColor,
+          fontSize: themeOverrides.fontSize,
+          yPercent,
+        },
+        // Include theme properties for export
+        fontFamily: theme.fontFamily,
+        fontWeight: theme.fontWeight,
+        strokeWidth: theme.strokeWidth,
+        strokeColor: theme.strokeColor,
+        shadowBlur: theme.shadowBlur,
+        shadowColor: theme.shadowColor,
+        displayMode: theme.displayMode,
+        highlightMode: theme.highlightMode,
+      });
+
+      const response = await fetch(`http://localhost:3001/api/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ styleJson }),
+      });
+
+      if (!response.ok) throw new Error('Failed to save style');
+
+      toast({
+        title: "Configuration saved",
+        description: "Your settings have been saved.",
+      });
+    } catch (error) {
+      console.error('Save error:', error);
+      toast({
+        title: "Save failed",
+        description: "Could not save configuration.",
+        variant: "destructive",
+      });
+    }
+  }, [projectId, currentTheme, themeOverrides, yPercent]);
 
   const exportConfig = useCallback(() => {
     const config: PlayerConfig = {
@@ -140,6 +314,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         captions,
         yPercent,
         currentTime,
+        videoUrl,
+        isLoading,
         setCurrentTheme,
         updateThemeOverride,
         setYPercent,
