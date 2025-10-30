@@ -1,3 +1,12 @@
+# Dependencies
+node_modules
+server/node_modules
+
+# Build
+dist
+dist-ssr
+*.local
+
 # Logs
 logs
 *.log
@@ -7,12 +16,27 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Database
+server/prisma/*.db
+server/prisma/*.db-journal
+server/dev.db
+server/dev.db-journal
 
-# Editor directories and files
+# Storage
+server/storage/*
+!server/storage/.gitkeep
+
+# Backups
+*.zip
+*.backup
+backup_*
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -22,3 +46,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# OS
+Thumbs.db
+.DS_Store
