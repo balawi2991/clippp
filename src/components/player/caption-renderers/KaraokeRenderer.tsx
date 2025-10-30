@@ -33,21 +33,27 @@ export const KaraokeRenderer: React.FC<KaraokeRendererProps> = ({
   const words = useMemo(() => caption.text.split(" "), [caption.text]);
 
   const activeWordIndex = useMemo(() => {
-    if (!caption.start || !caption.end) return 0;
+    if (!caption.start || !caption.end) return null;
     
     // Use precise word timing from Whisper if available
     if (caption.words && caption.words.length > 0) {
+      // Find the word that is currently being spoken
       for (let i = 0; i < caption.words.length; i++) {
         const word = caption.words[i];
+        // Highlight only during the exact word timing
         if (currentTime >= word.s && currentTime < word.e) {
           return i;
         }
       }
-      // If past all words, return last word
-      return caption.words.length - 1;
+      // No word is active at this time (pause between words or after caption ends)
+      return null;
     }
     
-    // Fallback: distribute time evenly
+    // Fallback: distribute time evenly (only if within caption duration)
+    if (currentTime < caption.start || currentTime >= caption.end) {
+      return null; // Outside caption time range
+    }
+    
     const captionDuration = caption.end - caption.start;
     const timeIntoCaption = currentTime - caption.start;
     const progress = Math.max(0, Math.min(1, timeIntoCaption / captionDuration));
@@ -65,7 +71,7 @@ export const KaraokeRenderer: React.FC<KaraokeRendererProps> = ({
     <CaptionContainer yPercent={yPercent}>
       <div className="inline-flex flex-wrap justify-center" style={{ gap: scaled.karaokeGap }}>
         {words.map((word, index) => {
-          const isActive = index === activeWordIndex;
+          const isActive = activeWordIndex !== null && index === activeWordIndex;
 
           // Word highlight mode
           if (theme.highlightMode === "word-highlight") {

@@ -9,6 +9,11 @@ export interface CaptionBlock {
     textColor?: string;
     highlightColor?: string;
   };
+  words?: Array<{
+    w: string;  // word text
+    s: number;  // start time
+    e: number;  // end time
+  }>;
 }
 
 export interface Theme {

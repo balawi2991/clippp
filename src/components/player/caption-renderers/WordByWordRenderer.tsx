@@ -31,27 +31,34 @@ export const WordByWordRenderer: React.FC<WordByWordRendererProps> = ({
   const words = useMemo(() => caption.text.split(" "), [caption.text]);
 
   const activeWordIndex = useMemo(() => {
-    if (!caption.start || !caption.end) return 0;
+    if (!caption.start || !caption.end) return null;
     
     // Use precise word timing from Whisper if available
     if (caption.words && caption.words.length > 0) {
+      // Find the word that is currently being spoken
       for (let i = 0; i < caption.words.length; i++) {
         const word = caption.words[i];
+        // Show word only during its exact timing
         if (currentTime >= word.s && currentTime < word.e) {
           return i;
         }
       }
-      return caption.words.length - 1;
+      // No word is active at this time (pause between words or after caption ends)
+      return null;
     }
     
-    // Fallback: distribute time evenly
+    // Fallback: distribute time evenly (only if within caption duration)
+    if (currentTime < caption.start || currentTime >= caption.end) {
+      return null; // Outside caption time range
+    }
+    
     const captionDuration = caption.end - caption.start;
     const timeIntoCaption = currentTime - caption.start;
     const progress = Math.max(0, Math.min(1, timeIntoCaption / captionDuration));
     return Math.floor(progress * words.length);
   }, [currentTime, caption.start, caption.end, caption.words, words.length]);
 
-  const currentWord = words[Math.min(activeWordIndex, words.length - 1)] || "";
+  const currentWord = activeWordIndex !== null ? (words[activeWordIndex] || "") : "";
 
   const textStyle: React.CSSProperties = {
     color: textColor,
